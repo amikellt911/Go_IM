@@ -52,7 +52,23 @@ func (this *User) Offline() {
 	this.server.BroadCast(this, "已下线")
 }
 
+// 给指定用户发消息
+func (this *User) sendMsg(msg string) {
+	this.conn.Write([]byte(msg))
+}
+
 // 发消息
 func (this *User) DoMessage(msg string) {
-	this.server.BroadCast(this, msg)
+	if msg == "who" {
+		//查询当前用户有哪些
+		this.server.mapLock.Lock()
+		for _, user := range this.server.OnlineMap {
+			onlineMsg := "[" + user.Addr + "]" + user.Name + ":" + "在线...\n"
+			this.sendMsg(onlineMsg)
+		}
+		this.server.mapLock.Unlock()
+	} else { //神经病，go的if的闭括号，即 if {} 的右括号，要和else的紧邻，一起写，不能分开
+		this.server.BroadCast(this, msg)
+	}
+
 }
