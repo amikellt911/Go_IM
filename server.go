@@ -3,23 +3,63 @@ package main
 import (
 	"fmt"
 	"net"
+	"sync"
 )
 
 type Server struct {
 	Ip   string
 	Port int
+
+	//在线用户列表
+	OnlineMap map[string]*User
+	mapLock   sync.RWMutex
+
+	Message chan string
 }
 
 func NewServer(ip string, port int) *Server {
 	server := &Server{
-		Ip:   ip,
-		Port: port, //每行后面好像都要有一个逗号，不能最后一行缺一个
+		Ip:        ip,
+		Port:      port, //每行后面好像都要有一个逗号，不能最后一行缺一个
+		OnlineMap: make(map[string]*User),
+		Message:   make(chan string),
 	}
 	return server
 }
 
+// 监听Message chan，广播
+func (this *Server) ListenMessager() {
+	for {
+		msg := <-this.Message
+
+		//msg发送所有在线User
+		this.mapLock.Lock()
+		for _, user := range this.OnlineMap {
+			user.C <- msg
+		}
+		this.mapLock.Unlock()
+	}
+}
+
+func (this *Server) BroadCast(user *User, msg string) {
+	sendMsg := "[" + user.Addr + "]" + user.Name + ":" + msg
+	this.Message <- sendMsg
+}
+
 func (this *Server) Handler(conn net.Conn) {
-	fmt.Println("链接建立成功")
+	//fmt.Println("链接建立成功")
+	//用户上线，将用户加入表中
+
+	user := NewUser(conn)
+	this.mapLock.Lock()
+
+	this.OnlineMap[user.Name] = user
+
+	this.mapLock.Unlock()
+	//广播上线消息
+	this.BroadCast(user, "已上线")
+	//阻塞
+	select {}
 }
 
 func (this *Server) Start() {
@@ -29,8 +69,9 @@ func (this *Server) Start() {
 		fmt.Println("listen err:", err)
 		return
 	}
+	//close
 	defer listener.Close()
-
+	go this.ListenMessager()
 	for {
 		//accept
 		conn, err := listener.Accept()
@@ -44,5 +85,4 @@ func (this *Server) Start() {
 		go this.Handler(conn)
 	}
 
-	//close
 }
