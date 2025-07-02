@@ -51,14 +51,9 @@ func (this *Server) Handler(conn net.Conn) {
 	//fmt.Println("链接建立成功")
 	//用户上线，将用户加入表中
 
-	user := NewUser(conn)
-	this.mapLock.Lock()
+	user := NewUser(conn, this)
 
-	this.OnlineMap[user.Name] = user
-
-	this.mapLock.Unlock()
-	//广播上线消息
-	this.BroadCast(user, "已上线")
+	user.Online()
 
 	//读取用户消息
 	go func() {
@@ -66,7 +61,7 @@ func (this *Server) Handler(conn net.Conn) {
 		for {
 			n, err := conn.Read(buf)
 			if n == 0 {
-				this.BroadCast(user, "已下线")
+				user.Offline()
 				return
 			}
 			//eof表示读到文件的末尾，不需要管
@@ -77,7 +72,7 @@ func (this *Server) Handler(conn net.Conn) {
 			//提取用户消息（去除'\n'）
 			msg := string(buf[:n-1])
 			//消息广播
-			this.BroadCast(user, msg)
+			user.DoMessage(msg)
 		}
 	}()
 
