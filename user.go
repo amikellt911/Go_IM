@@ -86,6 +86,28 @@ func (this *User) DoMessage(msg string) {
 			this.Name = newName
 			this.sendMsg("您已更新用户名:" + newName + "\n")
 		}
+	} else if len(msg) >= 4 && msg[:3] == "to|" {
+		//消息格式：to|张三|消息内容
+
+		//1. 获取对方用户名
+		remoteName := strings.Split(msg, "|")[1]
+		if remoteName == "" {
+			this.sendMsg("消息格式不正确，请使用 \"to|张三|你好啊\" 的格式完成\n")
+			return
+		}
+		//2.获取User对象
+		remoteUser, ok := this.server.OnlineMap[remoteName]
+		if !ok {
+			this.sendMsg("该用户不存在\n")
+			return
+		}
+		//3.消息内容发送给对方
+		content := strings.Split(msg, "|")[2]
+		if content == "" {
+			this.sendMsg("无消息内容，请重发\n")
+			return
+		}
+		remoteUser.sendMsg(this.Name + "对你说：" + content + "\n")
 	} else { //神经病，go的if的闭括号，即 if {} 的右括号，要和else的紧邻，一起写，不能分开
 		this.server.BroadCast(this, msg)
 	}

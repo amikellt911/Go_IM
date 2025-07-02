@@ -84,7 +84,7 @@ func (this *Server) Handler(conn net.Conn) {
 		//isLive写在time上面，这样下面的条件他会执行，虽然他进不了，但是执行条件后，他的时间就会重置
 		case <-isLive:
 			//重新执行就会重置计时器
-		case <-time.After(time.Second * 10):
+		case <-time.After(time.Second * 100):
 			//已经超时
 			//将当前用户强制下线
 			user.sendMsg("你被踢了")
